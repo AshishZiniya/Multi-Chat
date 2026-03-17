@@ -1,6 +1,8 @@
 import { signOut, useSession } from "next-auth/react"
+import Image from "next/image"
 import MaterialIcon from "./MaterialIcon"
 import * as Popover from "@radix-ui/react-popover"
+import Link from "next/link"
 
 export default function UserMenu() {
   const { data: session } = useSession()
@@ -15,7 +17,13 @@ export default function UserMenu() {
           title={session.user?.email || "User profile"}
         >
           {session.user?.image ? (
-            <img src={session.user.image} alt={session.user.name || ""} className="w-6 h-6 rounded-full" />
+            <Image 
+              src={session.user.image} 
+              alt={session.user.name || ""} 
+              width={24}
+              height={24}
+              className="rounded-full" 
+            />
           ) : (
             <MaterialIcon name="account_circle" />
           )}
@@ -28,14 +36,17 @@ export default function UserMenu() {
           align="end"
           className="z-9999 w-64 p-2 rounded-xl bg-white dark:bg-black shadow-xl border border-black/10 dark:border-white/20 font-barlow"
         >
-          <div className="px-3 py-2 border-b border-black/10 dark:border-white/20">
-            <p className="text-sm font-semibold text-black dark:text-white truncate">
+          <Link 
+            href="/profile"
+            className="block px-3 py-2 border-b border-black/10 dark:border-white/20 hover:bg-black/5 dark:hover:bg-white/10 rounded-t-lg transition-colors group"
+          >
+            <p className="text-sm font-semibold text-black dark:text-white truncate group-hover:text-primary transition-colors">
               {session.user?.name || "User"}
             </p>
             <p className="text-xs text-black/50 dark:text-white/40 truncate">
               {session.user?.email}
             </p>
-          </div>
+          </Link>
           <div className="mt-2">
             <button
               onClick={() => signOut()}
