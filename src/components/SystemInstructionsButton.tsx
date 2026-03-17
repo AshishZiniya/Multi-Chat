@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAtom } from 'jotai'
-import { Panel } from '@xyflow/react'
 import * as Popover from '@radix-ui/react-popover'
 import MaterialIcon from './MaterialIcon'
 import { systemInstructionsAtom } from '../store/canvasAtoms'
@@ -61,34 +60,32 @@ export default function SystemInstructionsButton() {
   const [open, setOpen] = useState(false)
 
   return (
-    <Panel position="top-right" className="m-4!">
-      <Popover.Root open={open} onOpenChange={setOpen}>
-        <Popover.Trigger asChild>
-          <button
-            type="button"
-            className="aspect-square size-10 flex items-center justify-center rounded-lg border border-black/10 dark:border-white/20 bg-white dark:bg-black shadow-sm text-black dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
-            title="How should I respond?"
-            aria-label="How should I respond?"
-          >
-            <MaterialIcon name="hearing" />
-          </button>
-        </Popover.Trigger>
-        <Popover.Portal>
-          <Popover.Content
-            side="bottom"
-            sideOffset={8}
-            align="end"
-            className="z-9999 focus:outline-none"
-            aria-labelledby="system-instructions-title"
-          >
-            <SystemInstructionsContent
-              value={systemInstructions}
-              onChange={setSystemInstructions}
-              open={open}
-            />
-          </Popover.Content>
-        </Popover.Portal>
-      </Popover.Root>
-    </Panel>
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Trigger asChild>
+        <button
+          type="button"
+          className="aspect-square size-10 flex items-center justify-center rounded-lg border border-black/10 dark:border-white/20 bg-white dark:bg-black shadow-sm text-black dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+          title="How should I respond?"
+          aria-label="How should I respond?"
+        >
+          <MaterialIcon name="hearing" />
+        </button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          side="bottom"
+          sideOffset={8}
+          align="end"
+          className="z-9999 focus:outline-none"
+          aria-labelledby="system-instructions-title"
+        >
+          <SystemInstructionsContent
+            value={systemInstructions}
+            onChange={setSystemInstructions}
+            open={open}
+          />
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   )
 }

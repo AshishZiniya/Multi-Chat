@@ -278,9 +278,11 @@ function Canvas() {
       className="bg-background"
     >
       <ZoomControls />
+      <Panel position="top-left" className="m-4!">
+        <SystemInstructionsButton />
+      </Panel>
       <Panel position="top-right" className="m-4! flex flex-col gap-2">
         <UserMenu />
-        <SystemInstructionsButton />
       </Panel>
     </ReactFlow>
   )

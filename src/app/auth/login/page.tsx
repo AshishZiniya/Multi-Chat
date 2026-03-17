@@ -23,12 +23,10 @@ export default function LoginPage() {
       const result = await signIn('credentials', {
         email,
         password,
-        redirect: false,
+        redirect: false
       })
 
-      if (result?.error) {
-        throw new Error(result.error)
-      }
+      console.log("result",result)
 
       router.push('/')
       router.refresh()
