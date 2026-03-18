@@ -31,11 +31,16 @@ export default function LoginPage() {
 
       console.log("result",result)
 
-      router.push('/')
-      router.refresh()
+      if (result?.error) {
+        setError('Invalid email or password')
+      } else {
+        router.push('/')
+        router.refresh()
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'An unexpected error occurred'
       setError(message === 'CredentialsSignin' ? 'Invalid email or password' : message)
+    } finally {
       setLoading(false)
     }
   }
@@ -71,20 +76,18 @@ export default function LoginPage() {
           />
           
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <label htmlFor="password" className="block text-sm font-medium text-white/70">Password</label>
-              <Link href="/auth/forgot-password" className="text-xs text-white/40 hover:text-white transition-colors">
-                Forgot password?
-              </Link>
-            </div>
             <FormInput
               id="password"
               name="password"
               type="password"
               label="Password"
-              placeholder="••••••••"
               required
             />
+          </div>
+          <div className="flex items-center justify-end mb-2">
+            <Link href="/auth/forgot-password" className="text-xs text-white/40 hover:text-white transition-colors">
+              Forgot password?
+            </Link>
           </div>
         </div>
 
