@@ -8,30 +8,96 @@ import Header from '@/components/ui/header'
 
 const JWTDebugger: React.FC = () => {
   const [encodedToken, setEncodedToken] = useState('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyNDI2MjIsInJvbGUiOiJhZG1pbiJ9.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c')
-  const [secretKey, setSecretKey] = useState('••••••••••••••••••••••••••••••••')
-  const [signatureVerified, setSignatureVerified] = useState(true)
+  const [secretKey, setSecretKey] = useState('')
+  const [signatureVerified, setSignatureVerified] = useState<boolean | null>(null)
+  const [decodedHeader, setDecodedHeader] = useState<any>(null)
+  const [decodedPayload, setDecodedPayload] = useState<any>(null)
+  const [error, setError] = useState<string | null>(null)
 
-  const decodedHeader = {
-    alg: "HS256",
-    typ: "JWT"
-  }
+  const decodeJWT = (token: string) => {
+    try {
+      const parts = token.split('.')
+      if (parts.length !== 3) {
+        throw new Error('Invalid JWT format')
+      }
 
-  const decodedPayload = {
-    sub: "1234567890",
-    name: "John Doe",
-    iat: 1516239022,
-    exp: 1516242622,
-    role: "admin"
+      const header = JSON.parse(atob(parts[0]))
+      const payload = JSON.parse(atob(parts[1]))
+      
+      return { header, payload, signature: parts[2] }
+    } catch (err) {
+      throw new Error('Failed to decode JWT: ' + (err instanceof Error ? err.message : 'Unknown error'))
+    }
   }
 
   const handleDecode = () => {
-    // Simulate decode
-    console.log('Decoding token...')
+    try {
+      setError(null)
+      const { header, payload } = decodeJWT(encodedToken)
+      setDecodedHeader(header)
+      setDecodedPayload(payload)
+      setSignatureVerified(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to decode token')
+      setDecodedHeader(null)
+      setDecodedPayload(null)
+    }
+  }
+
+  const verifySignature = async () => {
+    if (!secretKey) {
+      setError('Secret key is required for verification')
+      return
+    }
+
+    try {
+      setError(null)
+      const parts = encodedToken.split('.')
+      const header = JSON.parse(atob(parts[0]))
+      const payload = JSON.parse(atob(parts[1]))
+      
+      // Create the signature base
+      const signatureBase = `${parts[0]}.${parts[1]}`
+      
+      // Import the secret key
+      const encoder = new TextEncoder()
+      const keyData = encoder.encode(secretKey)
+      const cryptoKey = await crypto.subtle.importKey(
+        'raw',
+        keyData,
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['sign', 'verify']
+      )
+      
+      // Verify the signature
+      const signature = atob(parts[2])
+      const signatureBuffer = new Uint8Array(Array.from(signature).map(c => c.charCodeAt(0)))
+      
+      const isValid = await crypto.subtle.verify(
+        'HMAC',
+        cryptoKey,
+        signatureBuffer,
+        encoder.encode(signatureBase)
+      )
+      
+      setSignatureVerified(isValid)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to verify signature')
+      setSignatureVerified(false)
+    }
   }
 
   const handleVerify = () => {
-    // Simulate verification
-    setSignatureVerified(true)
+    verifySignature()
+  }
+
+  const formatJSON = (obj: any) => {
+    return JSON.stringify(obj, null, 2)
+  }
+
+  const formatTimestamp = (timestamp: number) => {
+    return new Date(timestamp * 1000).toISOString()
   }
 
   return (
@@ -48,13 +114,13 @@ const JWTDebugger: React.FC = () => {
               <h3 className="font-medium text-white">Encoded</h3>
             </div>
             <div className="flex-1 flex flex-col p-4 space-y-4">
-              <div className="flex-1 bg-[#0f172a] rounded border border-teal-500 p-3 font-mono text-sm break-all overflow-y-auto custom-scrollbar">
-                <span className="text-red-400">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9</span>
-                <span className="text-slate-200">.</span>
-                <span className="text-blue-400">eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyNDI2MjIsInJvbGUiOiJhZG1pbiJ9</span>
-                <span className="text-slate-200">.</span>
-                <span className="text-orange-400">SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c</span>
-              </div>
+              <textarea
+                value={encodedToken}
+                onChange={(e) => setEncodedToken(e.target.value)}
+                className="flex-1 bg-[#0f172a] rounded border border-teal-500 p-3 font-mono text-sm break-all overflow-y-auto custom-scrollbar resize-none focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                placeholder="Enter JWT token..."
+                rows={6}
+              />
               <Button 
                 onClick={handleDecode}
                 className="w-full bg-[#1e293b] border border-slate-600 hover:bg-slate-700"
@@ -71,22 +137,15 @@ const JWTDebugger: React.FC = () => {
               <h3 className="font-medium text-white">Decoded Header</h3>
             </div>
             <div className="flex-1 bg-[#0f172a] p-4 font-mono text-sm overflow-y-auto custom-scrollbar relative">
-              <div className="flex">
-                <div className="w-8 text-slate-600 select-none pr-4 text-right">
-                  1<br/>2<br/>3<br/>4
+              {decodedHeader ? (
+                <pre className="text-slate-300">
+                  {formatJSON(decodedHeader)}
+                </pre>
+              ) : (
+                <div className="text-slate-500 text-center py-8">
+                  Click "Decode" to view header
                 </div>
-                <div className="flex-1">
-                  <span className="text-slate-300">{`{`}</span><br/>
-                  <span className="ml-4 text-orange-400">"alg"</span>
-                  <span className="text-slate-300">:</span> 
-                  <span className="text-teal-500">"HS256"</span>
-                  <span className="text-slate-300">,</span><br/>
-                  <span className="ml-4 text-orange-400">"typ"</span>
-                  <span className="text-slate-300">:</span> 
-                  <span className="text-teal-500">"JWT"</span><br/>
-                  <span className="text-slate-300">{`}`}</span>
-                </div>
-              </div>
+              )}
             </div>
           </Card>
 
@@ -97,34 +156,28 @@ const JWTDebugger: React.FC = () => {
               <h3 className="font-medium text-white">Decoded Payload</h3>
             </div>
             <div className="flex-1 bg-[#0f172a] p-4 font-mono text-sm overflow-y-auto custom-scrollbar relative">
-              <div className="flex">
-                <div className="w-8 text-slate-600 select-none pr-4 text-right">
-                  1<br/>2<br/>3<br/>4<br/>5<br/>6<br/>7
+              {decodedPayload ? (
+                <div>
+                  <pre className="text-slate-300">
+                    {formatJSON(decodedPayload)}
+                  </pre>
+                  {decodedPayload.exp && (
+                    <div className="mt-4 pt-4 border-t border-slate-700">
+                      <div className="text-xs text-slate-400">
+                        <div>Expires: {formatTimestamp(decodedPayload.exp)}</div>
+                        <div>Issued At: {formatTimestamp(decodedPayload.iat)}</div>
+                        {decodedPayload.exp < Date.now() / 1000 && (
+                          <div className="text-red-400 mt-2">⚠️ Token has expired</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="flex-1">
-                  <span className="text-slate-300">{`{`}</span><br/>
-                  <span className="ml-4 text-orange-400">"sub"</span>
-                  <span className="text-slate-300">:</span> 
-                  <span className="text-teal-500">"1234567890"</span>
-                  <span className="text-slate-300">,</span><br/>
-                  <span className="ml-4 text-orange-400">"name"</span>
-                  <span className="text-slate-300">:</span> 
-                  <span className="text-teal-500">"John Doe"</span>
-                  <span className="text-slate-300">,</span><br/>
-                  <span className="ml-4 text-orange-400">"iat"</span>
-                  <span className="text-slate-300">:</span> 
-                  <span className="text-purple-400">1516239022</span>
-                  <span className="text-slate-300">,</span><br/>
-                  <span className="ml-4 text-orange-400">"exp"</span>
-                  <span className="text-slate-300">:</span> 
-                  <span className="text-purple-400">1516242622</span>
-                  <span className="text-slate-300">,</span><br/>
-                  <span className="ml-4 text-orange-400">"role"</span>
-                  <span className="text-slate-300">:</span> 
-                  <span className="text-teal-500">"admin"</span><br/>
-                  <span className="text-slate-300">{`}`}</span>
+              ) : (
+                <div className="text-slate-500 text-center py-8">
+                  Click "Decode" to view payload
                 </div>
-              </div>
+              )}
             </div>
           </Card>
         </div>
@@ -136,6 +189,11 @@ const JWTDebugger: React.FC = () => {
             <h3 className="font-medium text-white">Verify Signature</h3>
           </div>
           <div className="p-6">
+            {error && (
+              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-md text-red-400 text-sm">
+                {error}
+              </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
               <div className="space-y-4">
                 <div>
@@ -146,6 +204,7 @@ const JWTDebugger: React.FC = () => {
                     type="password"
                     value={secretKey}
                     onChange={(e) => setSecretKey(e.target.value)}
+                    placeholder="Enter secret key..."
                     className="bg-[#0f172a] border-slate-700"
                   />
                 </div>
@@ -155,17 +214,25 @@ const JWTDebugger: React.FC = () => {
                     Secret base64 encoded
                   </label>
                 </div>
-                <div className="pt-2">
-                  <p className="text-green-500 text-sm flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    Signature Verified: {signatureVerified ? 'True' : 'False'}
-                  </p>
-                </div>
+                {signatureVerified !== null && (
+                  <div className="pt-2">
+                    <p className={`text-sm flex items-center gap-2 ${signatureVerified ? 'text-green-500' : 'text-red-500'}`}>
+                      {signatureVerified ? (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      )}
+                      Signature {signatureVerified ? 'Verified' : 'Invalid'}
+                    </p>
+                  </div>
+                )}
               </div>
               <div className="flex flex-col sm:flex-row gap-4">
-                <Button onClick={handleVerify} className="flex-1 bg-[#334155] hover:bg-[#475569]">
+                <Button onClick={handleVerify} className="flex-1 bg-[#334155] hover:bg-[#475569]" disabled={!secretKey}>
                   Verify
                 </Button>
                 <Button variant="outline" className="flex-1 border-slate-600 hover:bg-slate-700">

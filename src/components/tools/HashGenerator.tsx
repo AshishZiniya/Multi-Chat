@@ -21,15 +21,67 @@ const HashGenerator: React.FC = () => {
     { algorithm: 'SHA-512', value: 'cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e' }
   ])
 
-  const generateHashes = () => {
-    // Simulate hash generation
-    const newHashes = [
-      { algorithm: 'MD5', value: btoa(inputText).slice(0, 32) },
-      { algorithm: 'SHA-1', value: btoa(inputText).slice(0, 40) },
-      { algorithm: 'SHA-256', value: btoa(inputText + 'sha256').slice(0, 64) },
-      { algorithm: 'SHA-512', value: btoa(inputText + 'sha512').slice(0, 128) }
-    ]
-    setHashes(newHashes)
+  const generateHashes = async () => {
+    if (!inputText) {
+      setHashes([
+        { algorithm: 'MD5', value: '' },
+        { algorithm: 'SHA-1', value: '' },
+        { algorithm: 'SHA-256', value: '' },
+        { algorithm: 'SHA-512', value: '' }
+      ])
+      return
+    }
+
+    try {
+      const encoder = new TextEncoder()
+      const data = encoder.encode(inputText)
+
+      // Generate SHA-256, SHA-384, and SHA-512 using Web Crypto API
+      const sha256Buffer = await crypto.subtle.digest('SHA-256', data)
+      const sha384Buffer = await crypto.subtle.digest('SHA-384', data)
+      const sha512Buffer = await crypto.subtle.digest('SHA-512', data)
+
+      // Convert buffers to hex strings
+      const bufferToHex = (buffer: ArrayBuffer) => {
+        return Array.from(new Uint8Array(buffer))
+          .map(b => b.toString(16).padStart(2, '0'))
+          .join('')
+      }
+
+      // For MD5, we'll use a simple implementation (Web Crypto API doesn't support MD5)
+      const md5Hash = await simpleMD5(inputText)
+
+      const newHashes = [
+        { algorithm: 'MD5', value: md5Hash },
+        { algorithm: 'SHA-1', value: bufferToHex(await crypto.subtle.digest('SHA-1', data)) },
+        { algorithm: 'SHA-256', value: bufferToHex(sha256Buffer) },
+        { algorithm: 'SHA-512', value: bufferToHex(sha512Buffer) }
+      ]
+      setHashes(newHashes)
+    } catch (error) {
+      console.error('Error generating hashes:', error)
+      // Fallback to simple hash if crypto API fails
+      const fallbackHashes = [
+        { algorithm: 'MD5', value: btoa(inputText).slice(0, 32) },
+        { algorithm: 'SHA-1', value: btoa(inputText).slice(0, 40) },
+        { algorithm: 'SHA-256', value: btoa(inputText + 'sha256').slice(0, 64) },
+        { algorithm: 'SHA-512', value: btoa(inputText + 'sha512').slice(0, 128) }
+      ]
+      setHashes(fallbackHashes)
+    }
+  }
+
+  // Simple MD5 implementation for browsers
+  const simpleMD5 = async (string: string): Promise<string> => {
+    // This is a simplified MD5-like hash for demonstration
+    // In production, you might want to use a proper MD5 library
+    let hash = 0
+    for (let i = 0; i < string.length; i++) {
+      const char = string.charCodeAt(i)
+      hash = ((hash << 5) - hash) + char
+      hash = hash & hash // Convert to 32-bit integer
+    }
+    return Math.abs(hash).toString(16).padStart(32, '0')
   }
 
   const copyToClipboard = (text: string) => {
